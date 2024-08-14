@@ -21,7 +21,10 @@ def process_data(data):
 # 주파수 피크 찾기 함수
 def find_peak_frequency(fft_data, freqs):
     idx = np.argmax(np.abs(fft_data))
-    return freqs[idx]
+    if idx < len(freqs):
+        return freqs[idx]
+    else:
+        return None  # 또는 적절한 값 반환
 
 # 튜닝 상태 판단 함수
 def check_tuning(freq, standard_freq):
@@ -34,7 +37,7 @@ def check_tuning(freq, standard_freq):
         return "정확합니다."
 
 # matplotlib 백엔드 설정
-plt.ion()
+#plt.ion()
 
 # PyAudio 객체 생성
 p = pyaudio.PyAudio()
@@ -64,7 +67,7 @@ stream = p.open(format=FORMAT,
 print("Recording...")
 
 freqs = np.fft.fftfreq(CHUNK, 1.0 / RATE)  # freqs를 외부에서 계산
-for i in range(0, int(RATE / CHUNK * 2)):
+for i in range(0, int(RATE / CHUNK * 20)):       #2초 동안 동작
     data = stream.read(CHUNK)
     data_int16 = np.frombuffer(data, dtype=np.int16)
 
@@ -75,11 +78,14 @@ for i in range(0, int(RATE / CHUNK * 2)):
     fft_data = np.fft.fft(data_int16)
     peak_freq = find_peak_frequency(fft_data, freqs)
 
+    print(f"freq : {peak_freq}")
+
     #
     # # 튜닝 상태 확인 및 출력
     # for i, std_freq in enumerate(standard_freqs):
     #     tuning_result = check_tuning(peak_freq, std_freq)
     #     print(f"현 {i+1}: {tuning_result}")
+
 
 
 # 스트림 종료
