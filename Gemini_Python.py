@@ -3,11 +3,17 @@ import wave
 import numpy as np
 import matplotlib.pyplot as plt
 
+import logging              #로그작성
+import traceback            #오류 출력
+
+#로깅 설정
+logging.basicConfig(filename='error.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+
 # 오디오 스트림 파라미터 (CHUNK 값 증가)
 FORMAT = pyaudio.paInt16  # 오디오 포맷 (16비트 PCM)
 CHANNELS = 1              # 채널 수 변경 (모노)
 RATE = 44100              # 샘플 레이트 (44.1kHz)
-CHUNK = 2048              # 버퍼 크기 (2048 프레임) 증가
+CHUNK = 1024              # 버퍼 크기 (1024 프레임) 증가
 
 # 표준 주파수 (예: E, B, G, D, A, E 현)
 standard_freqs = [330, 247, 196, 147, 110, 82.41]  # Hz
@@ -53,34 +59,40 @@ dev_index = int(input("Choose the device index: "))
 dev_info = p.get_device_info_by_index(dev_index)
 CHANNELS = dev_info['maxInputChannels']  # 해당 장치의 최대 입력 채널 수 사용
 
+try:
+    stream = p.open(format=FORMAT,
+                    channels=CHANNELS,
+                    rate=RATE,
+                    input=True,
+                    input_device_index=dev_index,
+                    frames_per_buffer=CHUNK)
 
-stream = p.open(format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                input_device_index=dev_index,
-                frames_per_buffer=CHUNK)
+    print("Recording...")
 
-print("Recording...")
+    freqs = np.fft.fftfreq(CHUNK, 1.0 / RATE)  # freqs를 외부에서 계산
 
-freqs = np.fft.fftfreq(CHUNK, 1.0 / RATE)  # freqs를 외부에서 계산
-for i in range(0, int(RATE / CHUNK * 2)):
-    data = stream.read(CHUNK)
-    data_int16 = np.frombuffer(data, dtype=np.int16)
+    for i in range(0, int(RATE / CHUNK * 5)):
+        data = stream.read(CHUNK)
+        data_int16 = np.frombuffer(data, dtype=np.int16)
 
-    # 데이터 처리
-    processed_data = process_data(data_int16)
+        # 데이터 처리
+        processed_data = process_data(data_int16)
 
-    # FFT 수행 및 주파수 피크 찾기
-    fft_data = np.fft.fft(data_int16)
-    peak_freq = find_peak_frequency(fft_data, freqs)
+        # FFT 수행 및 주파수 피크 찾기
+        fft_data = np.fft.fft(data_int16)
+        peak_freq = find_peak_frequency(fft_data, freqs)
 
-    #
-    # # 튜닝 상태 확인 및 출력
-    # for i, std_freq in enumerate(standard_freqs):
-    #     tuning_result = check_tuning(peak_freq, std_freq)
-    #     print(f"현 {i+1}: {tuning_result}")
 
+        # # 튜닝 상태 확인 및 출력
+        # for i, std_freq in enumerate(standard_freqs):
+        #     tuning_result = check_tuning(peak_freq, std_freq)
+        #     print(f"현 {i+1}: {tuning_result}")
+
+
+# 오류처리
+except OSError as e:
+    logging.error(f"오류 발생: {e}")
+    logging.exception(traceback.format_exc())
 
 # 스트림 종료
 stream.stop_stream()
@@ -89,10 +101,9 @@ p.terminate()
 
 # 캡처된 데이터를 파일로 저장 (옵션)
 frames = []  # frames 리스트 초기화
-if frames:  # frames 리스트가 비어있지 않을 때만 저장
-    wf = wave.open("output_stereo.wav", 'wb')
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(p.get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(b''.join(frames))
-    wf.close()
+wf = wave.open("output_stereo.wav", 'wb')
+wf.setnchannels(CHANNELS)
+wf.setsampwidth(p.get_sample_size(FORMAT))
+wf.setframerate(RATE)
+wf.writeframes(b''.join(frames))
+wf.close()
