@@ -89,10 +89,9 @@ p.terminate()
 
 # 캡처된 데이터를 파일로 저장 (옵션)
 frames = []  # frames 리스트 초기화
-if frames:  # frames 리스트가 비어있지 않을 때만 저장
-    wf = wave.open("output_stereo.wav", 'wb')
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(p.get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(b''.join(frames))
-    wf.close()
+wf = wave.open("output_stereo.wav", 'wb')
+wf.setnchannels(CHANNELS)
+wf.setsampwidth(p.get_sample_size(FORMAT))
+wf.setframerate(RATE)
+wf.writeframes(b''.join(frames))
+wf.close()
