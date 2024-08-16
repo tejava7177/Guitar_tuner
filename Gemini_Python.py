@@ -1,6 +1,9 @@
 import pyaudio
 import wave
 import numpy as np
+import function.test
+import function.preferences
+import function.tuner
 import matplotlib.pyplot as plt
 
 import logging              #로그작성
@@ -18,29 +21,6 @@ CHUNK = 2048              # 버퍼 크기 (2048 프레임) 증가
 # 표준 주파수 (예: E, B, G, D, A, E 현)
 standard_freqs = [330, 247, 196, 147, 110, 82.41]  # Hz
 
-# 데이터 최적화 함수
-def process_data(data):
-    # 벡터화 연산 예시
-    filtered_data = np.convolve(data, np.ones(5) / 5, mode='valid')  # 이동 평균 필터링
-    return filtered_data
-
-# 주파수 피크 찾기 함수
-def find_peak_frequency(fft_data, freqs):
-    idx = np.argmax(np.abs(fft_data))
-    if idx < len(freqs):
-        return freqs[idx]
-    else:
-        return None  # 또는 적절한 값 반환
-
-# 튜닝 상태 판단 함수
-def check_tuning(freq, standard_freq):
-    tolerance = 5  # 허용 오차
-    if freq > standard_freq + tolerance:
-        return "너무 높습니다."
-    elif freq < standard_freq - tolerance:
-        return "너무 낮습니다."
-    else:
-        return "정확합니다."
 
 # matplotlib 백엔드 설정
 #plt.ion()
@@ -71,6 +51,7 @@ try:
                     frames_per_buffer=CHUNK)
 
     print("Recording...")
+    function.test.test_print()
 
     freqs = np.fft.fftfreq(CHUNK, 1.0 / RATE)  # freqs를 외부에서 계산
     for i in range(0, int(RATE / CHUNK * 20)):       #2초 동안 동작
@@ -78,11 +59,11 @@ try:
         data_int16 = np.frombuffer(data, dtype=np.int16)
 
         # 데이터 처리
-        processed_data = process_data(data_int16)
+        processed_data = function.preferences.process_data(data_int16)
 
         # FFT 수행 및 주파수 피크 찾기
         fft_data = np.fft.fft(data_int16)
-        peak_freq = find_peak_frequency(fft_data, freqs)
+        peak_freq = function.preferences.find_peak_frequency(fft_data, freqs)
 
         print(f"freq : {peak_freq}")
 
